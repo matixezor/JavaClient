@@ -1,40 +1,51 @@
 import javax.swing.*;
 import java.awt.*;
-import java.io.*;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.net.*;
+import java.io.*;
 import javax.swing.UIManager.*;
 
 public class App extends JFrame{
     JFrame frame;
+    Socket socket;
+    DefaultListModel<String> stringModel;
+    ReadThread readThread;
+    WriteThread writeThread;
+    PrintWriter printWriter;
+    JList<String> chatList;
 
 
-    public Socket connect(String ip, int port, String name) throws Exception {
-        Socket socket = new Socket(ip, port);
-        return socket;
+    public Socket connect(String ip, int port) throws Exception {
+        return new Socket(ip, port);
     }
 
 
+
     App(){
+
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setTitle("Chat");
 
+        //card layout panel to show either menu or chat
         JPanel menuCard = new JPanel(new CardLayout());
 
-        JPanel menu = new JPanel();
-        menu.setLayout(new BoxLayout(menu, BoxLayout.Y_AXIS));
-        menu.setMaximumSize(new Dimension(300, 400));
+        //menu panel
+        JPanel menuPanel = new JPanel();
+        menuPanel.setLayout(new BoxLayout(menuPanel, BoxLayout.Y_AXIS));
+        menuPanel.setMaximumSize(new Dimension(300, 400));
 
-        menu.add(Box.createRigidArea(new Dimension(260, 10)));
+        menuPanel.add(Box.createRigidArea(new Dimension(260, 10)));
         JLabel menuLabel = new JLabel("<html>Welcome to chat app!<br/> Fill in your credentials!</html>");
         menuLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         menuLabel.setHorizontalAlignment(SwingConstants.CENTER);
         menuLabel.setMaximumSize(new Dimension(260, 50));
         menuLabel.setForeground(Color.white);
-        menu.add(menuLabel);
-        menu.add(Box.createRigidArea(new Dimension(260, 10)));
+        menuPanel.add(menuLabel);
+        menuPanel.add(Box.createRigidArea(new Dimension(260, 10)));
 
-
-        JPanel input = new JPanel();
+        //child panel of menu
+        JPanel inputPanel = new JPanel();
 
 
         JTextField ipInput = new JTextField("0.0.0.0");
@@ -48,15 +59,14 @@ public class App extends JFrame{
         nameInput.setPreferredSize(new Dimension(265, 25));
 
 
-        input.add(ipInput);
-        input.add(portInput);
-        input.add(nameInput);
+        inputPanel.add(ipInput);
+        inputPanel.add(portInput);
+        inputPanel.add(nameInput);
 
-        input.setMaximumSize(new Dimension(300, 75));
-        input.setBackground(Color.decode("#2d0922"));
-
-        menu.add(input);
-
+        inputPanel.setMaximumSize(new Dimension(300, 75));
+        inputPanel.setBackground(Color.decode("#2d0922"));
+        // end child panel
+        menuPanel.add(inputPanel);
 
         JButton connBtn = new JButton("Connect");
         connBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -64,39 +74,145 @@ public class App extends JFrame{
         connBtn.setMaximumSize(new Dimension(230, 40));
         connBtn.addActionListener(actionEvent -> {
             try {
-                Socket socket = connect(ipInput.getText(), Integer.parseInt(portInput.getText()), nameInput.getText());
-                socket.close();
+                socket = connect(ipInput.getText(), Integer.parseInt(portInput.getText()));
+                readThread = new ReadThread(socket, stringModel);
+                readThread.start();
+                printWriter = new PrintWriter(socket.getOutputStream(), true);
+                printWriter.println(nameInput.getText());
+                CardLayout card = (CardLayout) menuCard.getLayout();
+                card.show(menuCard, "chat");
             }
             catch (Exception e){
                 JOptionPane.showMessageDialog(frame, "Unable to connect!");
+                e.printStackTrace();
             }
         });
-
         JButton exitBtn = new JButton("Exit");//create button
         exitBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
         exitBtn.setAlignmentY(Component.CENTER_ALIGNMENT);
         exitBtn.setMaximumSize(new Dimension(230, 40));
         exitBtn.addActionListener(actionEvent -> System.exit(0));
 
-        menu.setBackground(Color.decode("#2d0922"));
+        menuPanel.setBackground(Color.decode("#2d0922"));
 
-        menu.add(connBtn);
-        menu.add(Box.createRigidArea(new Dimension(260, 10)));
-        menu.add(exitBtn);
-        menuCard.add(menu);
+        menuPanel.add(connBtn);
+        menuPanel.add(Box.createRigidArea(new Dimension(260, 10)));
+        menuPanel.add(exitBtn);
+        menuCard.add(menuPanel, "menu");
+        //end of menu
+        //chat panel
+        JPanel chatPanel = new JPanel();
+        chatPanel.setLayout(new GridBagLayout());
+        chatPanel.setBackground(Color.decode("#2d0922"));
 
+        GridBagConstraints c = new GridBagConstraints();
+
+        JButton backButton = new JButton("Back");
+        backButton.addActionListener(actionEvent -> {
+            try{
+                readThread.stop();
+                printWriter.println("exit");
+                printWriter.close();
+                socket.close();
+
+            }
+            catch (Exception e){
+                e.printStackTrace();
+            }
+            stringModel = new DefaultListModel<>();
+            chatList.setModel(stringModel);
+            CardLayout card = (CardLayout) menuCard.getLayout();
+            card.show(menuCard, "menu");
+        });
+        c.insets = new Insets(10, 8, 0, 5);
+        c.fill = GridBagConstraints.BOTH;
+        c.anchor = GridBagConstraints.FIRST_LINE_START;
+        c.gridx = 0;
+        c.gridy = 0;
+        chatPanel.add(backButton, c);
+
+        stringModel = new DefaultListModel<>();
+        chatList = new JList<>(stringModel);
+        JScrollPane chatScroll = new JScrollPane(
+                chatList,
+                JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
+                JScrollPane.HORIZONTAL_SCROLLBAR_NEVER
+        );
+
+        CellRenderer cellRenderer = new CellRenderer(400);
+        chatList.addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                super.componentResized(e);
+                cellRenderer.setWitdh(chatList.getWidth()-150);
+            }
+        });
+        chatList.setCellRenderer(cellRenderer);
+        chatList.setBackground(Color.decode("#450b33"));
+        chatList.setForeground(Color.decode("#20c20e"));
+        chatList.setFont(new Font(Font.DIALOG, Font.BOLD, 12));
+        chatScroll.setBorder(BorderFactory.createLineBorder(Color.black, 2));
+
+
+        c.insets = new Insets(0, 8, 0, 8);
+        c.fill = GridBagConstraints.BOTH;
+        c.anchor = GridBagConstraints.LINE_START;
+        c.ipady = 40;
+        c.weightx = 0.5;
+        c.gridwidth = 5;
+        c.weighty = 1;
+        c.gridx = 0;
+        c.gridy = 1;
+        chatPanel.add(chatScroll, c);
+
+        JTextPane chatInput = new JTextPane();
+        c.insets = new Insets(5, 10, 8, 0);
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.anchor = GridBagConstraints.LAST_LINE_START;
+        c.ipady = 0;
+        c.weighty = 0;
+        c.gridwidth = 2;
+        c.gridx = 0;
+        c.gridy =2;
+        chatPanel.add(chatInput, c);
+//150.254.79.175
+        JButton chatSend = new JButton("Send");
+        c.insets = new Insets(3, 0, 6, 8);
+        c.fill = GridBagConstraints.BOTH;
+        c.anchor = GridBagConstraints.LAST_LINE_END;
+        c.weightx = 0;
+        c.gridx = 2;
+        c.gridy = 2;
+        chatSend.addActionListener(actionEvent -> {
+            String msg = chatInput.getText();
+            if (!msg.isEmpty()) {
+                try{
+                    printWriter.println(msg);
+                    stringModel.addElement("You:" + msg);
+                    chatInput.setText("");
+                }
+                catch (Exception e){
+                    e.printStackTrace();
+                }
+            }
+
+        });
+        chatPanel.add(chatSend, c);
+
+
+        //end of chat
+        menuCard.add(chatPanel, "chat");
         add(menuCard);
-        setSize(400,450);
-        setMinimumSize(new Dimension(300, 300));
+        setSize(550,500);
+        setMinimumSize(new Dimension(550, 500));
         setVisible(true);
-
     }
     public static void main(String[] args) {
         try {
             for (LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
                 if ("Nimbus".equals(info.getName())) {
                     UIManager.setLookAndFeel(info.getClassName());
-                    System.out.println("set");
+                    UIManager.getLookAndFeelDefaults().put("Scrollbar.minimumThumbSize", new Dimension(30, 30));
                     break;
                 }
             }
