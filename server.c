@@ -47,8 +47,10 @@ void init_client(struct client_struct *client, int id, struct sockaddr_in addres
 */
 
 void send_to_all(char *msg, int client_id){
-    for(int i = 0; i <= max_clients; i++){
+    printf("1) %d\n", clients[1].id);
+    for(int i = 0; i < max_clients; i++){
         if(clients[i].id >= 0){
+            printf("2) %d = %d\n", clients[i].id, client_id);
             if(clients[i].id != client_id){
                 write(clients[i].socket, msg, strlen(msg));
             }
@@ -57,7 +59,7 @@ void send_to_all(char *msg, int client_id){
 }
 
 
-int handle_client(struct client_struct client){
+int handle_client(client_struct client){
     char recv_buffer[buffer_size];
     char output_buffer[output_buffer_size];
 
@@ -69,11 +71,12 @@ int handle_client(struct client_struct client){
             memset(output_buffer, 0 ,output_buffer_size);
             sprintf(output_buffer, "%s disconnected\n", client.name);
             close(client.socket);
-            printf("%s(%s) disconnected\n", inet_ntoa(client.address), client.name);
+            printf("%s(%s) disconnected\n", inet_ntoa(client.address.sin_addr), client.name);
             send_to_all(output_buffer, client.id);
             break;
         }
-        printf("%s(%s): %s", inet_ntoa(client.address), client.name, recv_buffer);
+        printf("%s(%s): %s\n", inet_ntoa(client.address.sin_addr), client.name, recv_buffer);
+        printf("3) %s = %d\n", client.name, client.id);
         sprintf(output_buffer, "%s: %s", client.name, recv_buffer);
         send_to_all(output_buffer, client.id);
     }
@@ -156,6 +159,7 @@ int main()
 
         if (fork() == 0)
         {
+            printf("inside fork\n");
             int id;
             id = handle_client(clients[curr_clients_amount-1]);
             clients[id] = clients[curr_clients_amount];
