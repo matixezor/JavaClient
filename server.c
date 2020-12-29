@@ -12,7 +12,7 @@
 
 #define buffer_size 1024
 #define output_buffer_size 2000
-#define port 3001
+#define port 3000
 #define max_clients 50
 
 #define welcome_msg "-----------Welcome-----------\n"
@@ -35,7 +35,7 @@ typedef struct{
 } client_struct;
 
 
-client_struct *clients[max_clients];
+client_struct clients[max_clients];
 
 /*
 void init_client(struct client_struct *client, int id, struct sockaddr_in address, int socket, char* name){
@@ -47,12 +47,10 @@ void init_client(struct client_struct *client, int id, struct sockaddr_in addres
 */
 
 void send_to_all(char *msg, int client_id){
-    printf("1) %d\n", clients[1]->id);
     for(int i = 0; i < max_clients; i++){
-        if(clients[i]->id >= 0){
-            printf("2) %d = %d\n", clients[i]->id, client_id);
-            if(clients[i]->id != client_id){
-                write(clients[i]->socket, msg, strlen(msg));
+        if(clients[i].id >= 0){
+            if(clients[i].id != client_id){
+                write(clients[i].socket, msg, strlen(msg));
             }
         }
     }
@@ -78,11 +76,9 @@ void *handle_client(void *arg){
             break;
         }
         printf("%s(%s): %s\n", inet_ntoa(client->address.sin_addr), client->name, recv_buffer);
-        printf("3) %s = %d\n", client->name, client->id);
         sprintf(output_buffer, "%s: %s", client->name, recv_buffer);
         send_to_all(output_buffer, client->id);
     }
-    //return client.id;
 }
 
 
@@ -157,14 +153,13 @@ int main()
 
 
 
-
-        /*clients[curr_clients_amount].address = client_addr;
+        clients[curr_clients_amount].address = client_addr;
         clients[curr_clients_amount].id = curr_clients_amount;
         strcpy(clients[curr_clients_amount].name, recv_name);
         clients[curr_clients_amount].socket = new_socket;
-        curr_clients_amount++;*/
+        curr_clients_amount++;
 
-        pthread_create(&tid, NULL, &handle_client, (void*)clients);
+        pthread_create(&tid, NULL, &handle_client, &clients[curr_clients_amount-1]);
 
 
         /*if (fork() == 0)
