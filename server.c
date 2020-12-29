@@ -12,10 +12,10 @@
 
 #define buffer_size 1024
 #define output_buffer_size 2000
-#define port 3000
+#define port 3001
 #define max_clients 50
 
-#define welcome_msg "----------------------Welcome----------------------\n"
+#define welcome_msg "---------------------------------------------Welcome---------------------------------------------\n"
 
 /*void client_handler(int client_socket,int client_addr)
 {
@@ -162,7 +162,7 @@ int main()
         memset(recv_name, 0, 32);
         recv(new_socket, recv_name, 32, 0);
         write(new_socket, welcome_msg, strlen(welcome_msg));
-
+        recv_name[strlen(recv_name)-1] = '\0';
 
 
         clients[curr_clients_amount].address = client_addr;
