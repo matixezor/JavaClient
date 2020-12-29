@@ -15,7 +15,7 @@
 #define port 3000
 #define max_clients 50
 
-#define welcome_msg "-----------Welcome-----------\n"
+#define welcome_msg "----------------------Welcome----------------------\n"
 
 /*void client_handler(int client_socket,int client_addr)
 {
@@ -24,7 +24,7 @@
     recv(client_socket, recv_buffer, buffer_size, 0);
     printf("%s: %s", recv_buffer);
 }*/
-
+int curr_clients_amount = 0;
 
 typedef struct{
     struct sockaddr_in address;
@@ -48,12 +48,22 @@ void init_client(struct client_struct *client, int id, struct sockaddr_in addres
 
 void send_to_all(char *msg, int client_id){
     for(int i = 0; i < max_clients; i++){
-        if(clients[i].id >= 0){
+        if(clients[i].id >= 1){
             if(clients[i].id != client_id){
                 write(clients[i].socket, msg, strlen(msg));
             }
         }
     }
+}
+
+
+void remove_client(int client_id){
+    int i = 0;
+    while(clients[i].id != client_id)
+        i++;
+    clients[i] = clients[curr_clients_amount-1];
+    clients[curr_clients_amount-1].id = -1;
+    curr_clients_amount--;
 }
 
 
@@ -79,6 +89,8 @@ void *handle_client(void *arg){
         sprintf(output_buffer, "%s: %s", client->name, recv_buffer);
         send_to_all(output_buffer, client->id);
     }
+    remove_client(client->id);
+    pthread_exit(NULL);
 }
 
 
@@ -86,7 +98,7 @@ void *handle_client(void *arg){
 int main()
 {
     int server_socket, new_socket;
-    int curr_clients_amount = 0;
+    int id = 1;
 
     struct sockaddr_in client_addr;
     struct sockaddr_in server_addr;
@@ -154,24 +166,13 @@ int main()
 
 
         clients[curr_clients_amount].address = client_addr;
-        clients[curr_clients_amount].id = curr_clients_amount;
+        clients[curr_clients_amount].id = id;
         strcpy(clients[curr_clients_amount].name, recv_name);
         clients[curr_clients_amount].socket = new_socket;
+        id++;
         curr_clients_amount++;
 
         pthread_create(&tid, NULL, &handle_client, &clients[curr_clients_amount-1]);
-
-
-        /*if (fork() == 0)
-        {
-            printf("inside fork\n");
-            int id;
-            id = handle_client(clients[curr_clients_amount-1]);
-            clients[id] = clients[curr_clients_amount];
-            clients[curr_clients_amount].id = -1;
-            curr_clients_amount--;
-            exit(0);
-        }*/
     }
     return 0;
 }
