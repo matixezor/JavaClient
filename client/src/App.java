@@ -48,10 +48,10 @@ public class App extends JFrame{
         JPanel inputPanel = new JPanel();
 
 
-        JTextField ipInput = new JTextField("0.0.0.0");
+        JTextField ipInput = new JTextField("127.0.0.1");
         ipInput.setPreferredSize(new Dimension(200, 25));
 
-        JTextField portInput = new JTextField("00");
+        JTextField portInput = new JTextField("3000");
         portInput.setPreferredSize(new Dimension(60, 25));
 
 
@@ -175,7 +175,7 @@ public class App extends JFrame{
         c.gridx = 0;
         c.gridy =2;
         chatPanel.add(chatInput, c);
-//150.254.79.175
+
         JButton chatSend = new JButton("Send");
         c.insets = new Insets(3, 0, 6, 8);
         c.fill = GridBagConstraints.BOTH;
