@@ -5,6 +5,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <pthread.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -22,7 +23,6 @@
     //char send_buffer[buffer_size];
     recv(client_socket, recv_buffer, buffer_size, 0);
     printf("%s: %s", recv_buffer);
-
 }*/
 
 
@@ -35,7 +35,7 @@ typedef struct{
 } client_struct;
 
 
-client_struct clients[max_clients];
+client_struct *clients[max_clients];
 
 /*
 void init_client(struct client_struct *client, int id, struct sockaddr_in address, int socket, char* name){
@@ -47,40 +47,42 @@ void init_client(struct client_struct *client, int id, struct sockaddr_in addres
 */
 
 void send_to_all(char *msg, int client_id){
-    printf("1) %d\n", clients[1].id);
+    printf("1) %d\n", clients[1]->id);
     for(int i = 0; i < max_clients; i++){
-        if(clients[i].id >= 0){
-            printf("2) %d = %d\n", clients[i].id, client_id);
-            if(clients[i].id != client_id){
-                write(clients[i].socket, msg, strlen(msg));
+        if(clients[i]->id >= 0){
+            printf("2) %d = %d\n", clients[i]->id, client_id);
+            if(clients[i]->id != client_id){
+                write(clients[i]->socket, msg, strlen(msg));
             }
         }
     }
 }
 
 
-int handle_client(client_struct client){
+void *handle_client(void *arg){
     char recv_buffer[buffer_size];
     char output_buffer[output_buffer_size];
+    client_struct *client = (client_struct *)arg;
+
 
     while(1)
     {
         memset(recv_buffer, 0, buffer_size);
-        if(recv(client.socket, recv_buffer, buffer_size, 0)<= 0)
+        if(recv(client->socket, recv_buffer, buffer_size, 0)<= 0)
         {
             memset(output_buffer, 0 ,output_buffer_size);
-            sprintf(output_buffer, "%s disconnected\n", client.name);
-            close(client.socket);
-            printf("%s(%s) disconnected\n", inet_ntoa(client.address.sin_addr), client.name);
-            send_to_all(output_buffer, client.id);
+            sprintf(output_buffer, "%s disconnected\n", client->name);
+            close(client->socket);
+            printf("%s(%s) disconnected\n", inet_ntoa(client->address.sin_addr), client->name);
+            send_to_all(output_buffer, client->id);
             break;
         }
-        printf("%s(%s): %s\n", inet_ntoa(client.address.sin_addr), client.name, recv_buffer);
-        printf("3) %s = %d\n", client.name, client.id);
-        sprintf(output_buffer, "%s: %s", client.name, recv_buffer);
-        send_to_all(output_buffer, client.id);
+        printf("%s(%s): %s\n", inet_ntoa(client->address.sin_addr), client->name, recv_buffer);
+        printf("3) %s = %d\n", client->name, client->id);
+        sprintf(output_buffer, "%s: %s", client->name, recv_buffer);
+        send_to_all(output_buffer, client->id);
     }
-    return client.id;
+    //return client.id;
 }
 
 
@@ -92,6 +94,9 @@ int main()
 
     struct sockaddr_in client_addr;
     struct sockaddr_in server_addr;
+
+    pthread_t tid;
+
     //int client_addrlen = sizeof(client_addr);
     //int server_addrlen = sizeof(server_addr);
     socklen_t addrlen = sizeof(struct sockaddr_in);
@@ -151,13 +156,18 @@ int main()
         write(new_socket, welcome_msg, strlen(welcome_msg));
 
 
-        clients[curr_clients_amount].address = client_addr;
+
+
+        /*clients[curr_clients_amount].address = client_addr;
         clients[curr_clients_amount].id = curr_clients_amount;
         strcpy(clients[curr_clients_amount].name, recv_name);
         clients[curr_clients_amount].socket = new_socket;
-        curr_clients_amount++;
+        curr_clients_amount++;*/
 
-        if (fork() == 0)
+        pthread_create(&tid, NULL, &handle_client, (void*)clients);
+
+
+        /*if (fork() == 0)
         {
             printf("inside fork\n");
             int id;
@@ -166,11 +176,7 @@ int main()
             clients[curr_clients_amount].id = -1;
             curr_clients_amount--;
             exit(0);
-        }
+        }*/
     }
     return 0;
 }
-
-
-
-
