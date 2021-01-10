@@ -11,7 +11,7 @@ public class App extends JFrame{
     Socket socket;
     DefaultListModel<String> stringModel;
     ReadThread readThread;
-    WriteThread writeThread;
+    //WriteThread writeThread;
     PrintWriter printWriter;
     JList<String> chatList;
 

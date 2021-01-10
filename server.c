@@ -6,13 +6,14 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <dirent.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
 
 #define buffer_size 1024
 #define output_buffer_size 2000
-#define port 3001
+#define port 3000
 #define max_clients 50
 
 #define welcome_msg "---------------------------------------------Welcome---------------------------------------------\n"
@@ -93,6 +94,97 @@ void *handle_client(void *arg){
     pthread_exit(NULL);
 }
 
+    void handle_download(int new_socket)
+    {
+        char path[512];
+        char full_path[512];
+        struct stat fileinfo;
+        FILE* file;
+        long file_length, send, all_send, read;
+
+        unsigned char buffer[buffer_size];
+        DIR *d;
+        struct dirent *dir;
+        d = opendir("./files");
+        if (d)
+        {
+            printf("sending file list\n");
+            while ((dir = readdir(d)) != NULL)
+            {
+                sprintf(buffer, " - %s\n", dir->d_name);
+                if(strcmp(buffer, " - .\n") == 0 || strcmp(buffer, " - ..\n") == 0)
+                {
+                    continue;
+                }
+                //printf("%s", file_buffer);
+                write(new_socket, buffer, strlen(buffer));
+            }
+            closedir(d);
+        }
+
+        memset(path, 0, 512);
+        if (recv(new_socket, path, 512, 0) <= 0)
+        {
+            printf("Couldn't read path\n");
+            return;
+        }
+        sprintf(full_path, "./files/%s", path);
+        full_path[strlen(full_path)-1] = 0;
+        printf("buffor sciezki - (%s)\n", full_path);
+        if (stat(full_path, &fileinfo) < 0)
+        {
+            printf("Couldn't find file\n");
+            return;
+        }
+        else
+        {
+            printf("jest w pyte :D\n");
+        }
+            if (fileinfo.st_size == 0)
+        {
+            printf("File size: 0\n");
+            return;
+        }
+        printf("File size: %d\n", fileinfo.st_size);
+
+        file_length = fileinfo.st_size;
+        all_send = 0;
+
+        file = fopen(full_path, "rb");
+        if(file == NULL)
+        {
+            printf("Couldn't open file\n");
+            return;
+        }
+        else
+        {
+            printf("otwarcie pliku chyba dziala\n");
+        }
+
+        while (all_send < file_length)
+        {
+            memset(buffer, 0, 1024);
+            read = fread(buffer, 1, 1024, file);
+            send = write(new_socket, buffer, read);
+            if (read != send)
+            {
+                break;
+            }
+            all_send += send;
+        }
+        if (all_send == file_length)
+        {
+
+            printf("Plik wyslany poprawnie\n");
+        }
+        else
+        {
+            printf("Blad przy wysylaniu pliku\n");
+        }
+
+        fclose(file);
+    }
+
 
 
 int main()
@@ -161,8 +253,20 @@ int main()
 
         memset(recv_name, 0, 32);
         recv(new_socket, recv_name, 32, 0);
-        write(new_socket, welcome_msg, strlen(welcome_msg));
         recv_name[strlen(recv_name)-1] = '\0';
+
+        if(strcmp(recv_name, "download") == 0)
+        {
+            if (fork() == 0)
+            {
+                fflush(stdout);
+                handle_download(new_socket);
+            }
+        }
+        else
+        {
+
+        write(new_socket, welcome_msg, strlen(welcome_msg));
 
 
         clients[curr_clients_amount].address = client_addr;
@@ -173,6 +277,9 @@ int main()
         curr_clients_amount++;
 
         pthread_create(&tid, NULL, &handle_client, &clients[curr_clients_amount-1]);
+        }
+
+
     }
     return 0;
 }
