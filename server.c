@@ -13,7 +13,7 @@
 
 #define buffer_size 1024
 #define output_buffer_size 2000
-#define port 3001
+#define port 3000
 #define max_clients 50
 
 #define welcome_msg "---------------------------------------------Welcome---------------------------------------------\n"
@@ -140,9 +140,6 @@ void *handle_client(void *arg){
             return;
         }
         else
-        {
-            printf("jest w pyte :D\n");
-        }
             if (fileinfo.st_size == 0)
         {
             printf("File size: 0\n");
@@ -161,10 +158,6 @@ void *handle_client(void *arg){
             write(new_socket, "error\n", strlen("error\n"));
             return;
         }
-        else
-        {
-            printf("otwarcie pliku chyba dziala\n");
-        }
 
         while (all_send < file_length)
         {
@@ -180,12 +173,12 @@ void *handle_client(void *arg){
         if (all_send == file_length)
         {
 
-            printf("Plik wyslany poprawnie\n");
+            printf("File sent correctly\n");
             write(new_socket, "done\n", strlen("done\n"));
         }
         else
         {
-            printf("Blad przy wysylaniu pliku\n");
+            printf("File sending failed\n");
             write(new_socket, "error\n", strlen("error\n"));
         }
 
@@ -266,7 +259,7 @@ int main()
         {
             if (fork() == 0)
             {
-                printf("HI");
+                //printf("HI");
                 fflush(stdout);
                 handle_download(new_socket);
             }
