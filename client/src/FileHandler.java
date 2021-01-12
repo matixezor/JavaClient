@@ -35,22 +35,19 @@ public class FileHandler{
     }
 
     public void readFile (String fileName) throws Exception{
-        try{
-            FileWriter writer = new FileWriter("/home/students/s452622/IdeaProjects/client/download/" + fileName);
-            BufferedWriter bufferedWriter = new BufferedWriter(writer);
-            while(true){
-                String input = bufferedReader.readLine();
-                if (input.equals("error"))
-                    throw new Exception("Server error");
-                if (input.equals("done")) {
-                    bufferedWriter.close();
-                    writer.close();
-                    return;
-                }
-                bufferedWriter.write(input + "\n");
+        FileWriter writer = new FileWriter("/home/students/s452622/IdeaProjects/client/download/" + fileName);
+        BufferedWriter bufferedWriter = new BufferedWriter(writer);
+        while(true){
+            String input = bufferedReader.readLine();
+            if (input.equals("error"))
+                throw new Exception("Server error");
+            if (input.equals("done")) {
+                bufferedWriter.close();
+                writer.close();
+                return;
             }
-        } catch (Exception e){
-            e.printStackTrace();
+            bufferedWriter.write(input + "\n");
         }
+
     }
 }

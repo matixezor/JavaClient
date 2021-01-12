@@ -13,7 +13,7 @@
 
 #define buffer_size 1024
 #define output_buffer_size 2000
-#define port 3000
+#define port 3001
 #define max_clients 50
 
 #define welcome_msg "---------------------------------------------Welcome---------------------------------------------\n"
@@ -136,6 +136,7 @@ void *handle_client(void *arg){
         if (stat(full_path, &fileinfo) < 0)
         {
             printf("Couldn't find file\n");
+            write(new_socket, "error\n", strlen("error\n"));
             return;
         }
         else
