@@ -242,9 +242,12 @@ public class App extends JFrame{
             }
             catch (Exception e){
                 e.printStackTrace();
+            }finally {
+                fileModel = new DefaultListModel<String>();
+                filesList.setModel(fileModel);
+                CardLayout card = (CardLayout) menuCard.getLayout();
+                card.show(menuCard, "menu");
             }
-            CardLayout card = (CardLayout) menuCard.getLayout();
-            card.show(menuCard, "menu");
         });
         c.insets = new Insets(10, 8, 0, 5);
         c.fill = GridBagConstraints.BOTH;
@@ -318,6 +321,8 @@ public class App extends JFrame{
                     JOptionPane.showMessageDialog(frame, "Unable to download!");
                     e.printStackTrace();
                 } finally {
+                    fileModel = new DefaultListModel<String>();
+                    filesList.setModel(fileModel);
                     CardLayout card = (CardLayout) menuCard.getLayout();
                     card.show(menuCard, "menu");
                 }
