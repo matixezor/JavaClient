@@ -77,7 +77,7 @@ void *handle_client(void *arg){
     while(1)
     {
         memset(recv_buffer, 0, buffer_size);
-        if(recv(client->socket, recv_buffer, buffer_size, 0)<= 0)
+        if(recv(client->socket, recv_buffer, buffer_size, 0)<= 0 || strcmp(recv_buffer, "exit\n") == 0)
         {
             memset(output_buffer, 0 ,output_buffer_size);
             sprintf(output_buffer, "%s disconnected\n", client->name);
@@ -121,11 +121,13 @@ void *handle_client(void *arg){
             }
             closedir(d);
         }
+        write(new_socket, "done\n", strlen("done\n"));
 
         memset(path, 0, 512);
         if (recv(new_socket, path, 512, 0) <= 0)
         {
             printf("Couldn't read path\n");
+            write(new_socket, "error\n", strlen("error\n"));
             return;
         }
         sprintf(full_path, "./files/%s", path);
@@ -143,6 +145,7 @@ void *handle_client(void *arg){
             if (fileinfo.st_size == 0)
         {
             printf("File size: 0\n");
+            write(new_socket, "error\n", strlen("error\n"));
             return;
         }
         printf("File size: %d\n", fileinfo.st_size);
@@ -154,6 +157,7 @@ void *handle_client(void *arg){
         if(file == NULL)
         {
             printf("Couldn't open file\n");
+            write(new_socket, "error\n", strlen("error\n"));
             return;
         }
         else
@@ -176,10 +180,12 @@ void *handle_client(void *arg){
         {
 
             printf("Plik wyslany poprawnie\n");
+            write(new_socket, "done\n", strlen("done\n"));
         }
         else
         {
             printf("Blad przy wysylaniu pliku\n");
+            write(new_socket, "error\n", strlen("error\n"));
         }
 
         fclose(file);
@@ -259,24 +265,27 @@ int main()
         {
             if (fork() == 0)
             {
+                printf("HI");
                 fflush(stdout);
                 handle_download(new_socket);
             }
         }
         else
         {
+            char conn_message[50];
+            write(new_socket, welcome_msg, strlen(welcome_msg));
+            sprintf(conn_message, "%s connected\n", recv_name);
+            send_to_all(conn_message, id);
 
-        write(new_socket, welcome_msg, strlen(welcome_msg));
 
+            clients[curr_clients_amount].address = client_addr;
+            clients[curr_clients_amount].id = id;
+            strcpy(clients[curr_clients_amount].name, recv_name);
+            clients[curr_clients_amount].socket = new_socket;
+            id++;
+            curr_clients_amount++;
 
-        clients[curr_clients_amount].address = client_addr;
-        clients[curr_clients_amount].id = id;
-        strcpy(clients[curr_clients_amount].name, recv_name);
-        clients[curr_clients_amount].socket = new_socket;
-        id++;
-        curr_clients_amount++;
-
-        pthread_create(&tid, NULL, &handle_client, &clients[curr_clients_amount-1]);
+            pthread_create(&tid, NULL, &handle_client, &clients[curr_clients_amount-1]);
         }
 
 
